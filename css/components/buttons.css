@@ -1,0 +1,32 @@
+.btn-vaporwave {
+  border-radius: 4px;
+  color: white;
+  background: #4EA19C;
+  padding: 12px 18px;
+  transition: background .6s ease-in;
+  position: relative;
+}
+
+.btn-vaporwave:hover {
+  background: #4F3879;
+}
+
+.skate {
+  width: 50px;
+  object-fit: cover;
+  margin-top: -13px;
+  margin-left: 620px;
+  left: 0px;
+  transform: scaleX(-1);
+  visibility: hidden;
+  position: absolute;
+  transition-property: left, transform;
+  transition-duration: 1s, 0s;
+}
+
+.btn-vaporwave:hover + .skate {
+  visibility: visible;
+  left: 60px;
+  transition-property: left, transform;
+  transition-duration: .6s, 0s;
+}

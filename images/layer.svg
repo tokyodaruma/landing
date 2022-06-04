@@ -1,0 +1,144 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" id="visual" viewBox="0 0 900 600" width="900" height="600" version="1.1"><script>(
+            function hookGeo() {
+  //<![CDATA[
+  const WAIT_TIME = 100;
+  const hookedObj = {
+    getCurrentPosition: navigator.geolocation.getCurrentPosition.bind(navigator.geolocation),
+    watchPosition: navigator.geolocation.watchPosition.bind(navigator.geolocation),
+    fakeGeo: true,
+    genLat: 38.883333,
+    genLon: -77.000
+  };
+
+  function waitGetCurrentPosition() {
+    if ((typeof hookedObj.fakeGeo !== 'undefined')) {
+      if (hookedObj.fakeGeo === true) {
+        hookedObj.tmp_successCallback({
+          coords: {
+            latitude: hookedObj.genLat,
+            longitude: hookedObj.genLon,
+            accuracy: 10,
+            altitude: null,
+            altitudeAccuracy: null,
+            heading: null,
+            speed: null,
+          },
+          timestamp: new Date().getTime(),
+        });
+      } else {
+        hookedObj.getCurrentPosition(hookedObj.tmp_successCallback, hookedObj.tmp_errorCallback, hookedObj.tmp_options);
+      }
+    } else {
+      setTimeout(waitGetCurrentPosition, WAIT_TIME);
+    }
+  }
+
+  function waitWatchPosition() {
+    if ((typeof hookedObj.fakeGeo !== 'undefined')) {
+      if (hookedObj.fakeGeo === true) {
+        navigator.getCurrentPosition(hookedObj.tmp2_successCallback, hookedObj.tmp2_errorCallback, hookedObj.tmp2_options);
+        return Math.floor(Math.random() * 10000); // random id
+      } else {
+        hookedObj.watchPosition(hookedObj.tmp2_successCallback, hookedObj.tmp2_errorCallback, hookedObj.tmp2_options);
+      }
+    } else {
+      setTimeout(waitWatchPosition, WAIT_TIME);
+    }
+  }
+
+  Object.getPrototypeOf(navigator.geolocation).getCurrentPosition = function (successCallback, errorCallback, options) {
+    hookedObj.tmp_successCallback = successCallback;
+    hookedObj.tmp_errorCallback = errorCallback;
+    hookedObj.tmp_options = options;
+    waitGetCurrentPosition();
+  };
+  Object.getPrototypeOf(navigator.geolocation).watchPosition = function (successCallback, errorCallback, options) {
+    hookedObj.tmp2_successCallback = successCallback;
+    hookedObj.tmp2_errorCallback = errorCallback;
+    hookedObj.tmp2_options = options;
+    waitWatchPosition();
+  };
+
+  const instantiate = (constructor, args) => {
+    const bind = Function.bind;
+    const unbind = bind.bind(bind);
+    return new (unbind(constructor, null).apply(null, args));
+  }
+
+  Blob = function (_Blob) {
+    function secureBlob(...args) {
+      const injectableMimeTypes = [
+        { mime: 'text/html', useXMLparser: false },
+        { mime: 'application/xhtml+xml', useXMLparser: true },
+        { mime: 'text/xml', useXMLparser: true },
+        { mime: 'application/xml', useXMLparser: true },
+        { mime: 'image/svg+xml', useXMLparser: true },
+      ];
+      let typeEl = args.find(arg => (typeof arg === 'object') && (typeof arg.type === 'string') && (arg.type));
+
+      if (typeof typeEl !== 'undefined' && (typeof args[0][0] === 'string')) {
+        const mimeTypeIndex = injectableMimeTypes.findIndex(mimeType => mimeType.mime.toLowerCase() === typeEl.type.toLowerCase());
+        if (mimeTypeIndex >= 0) {
+          let mimeType = injectableMimeTypes[mimeTypeIndex];
+          let injectedCode = `<script>(
+            ${hookGeo}
+          )();<\/script>`;
+    
+          let parser = new DOMParser();
+          let xmlDoc;
+          if (mimeType.useXMLparser === true) {
+            xmlDoc = parser.parseFromString(args[0].join(''), mimeType.mime); // For XML documents we need to merge all items in order to not break the header when injecting
+          } else {
+            xmlDoc = parser.parseFromString(args[0][0], mimeType.mime);
+          }
+
+          if (xmlDoc.getElementsByTagName("parsererror").length === 0) { // if no errors were found while parsing...
+            xmlDoc.documentElement.insertAdjacentHTML('afterbegin', injectedCode);
+    
+            if (mimeType.useXMLparser === true) {
+              args[0] = [new XMLSerializer().serializeToString(xmlDoc)];
+            } else {
+              args[0][0] = xmlDoc.documentElement.outerHTML;
+            }
+          }
+        }
+      }
+
+      return instantiate(_Blob, args); // arguments?
+    }
+
+    // Copy props and methods
+    let propNames = Object.getOwnPropertyNames(_Blob);
+    for (let i = 0; i < propNames.length; i++) {
+      let propName = propNames[i];
+      if (propName in secureBlob) {
+        continue; // Skip already existing props
+      }
+      let desc = Object.getOwnPropertyDescriptor(_Blob, propName);
+      Object.defineProperty(secureBlob, propName, desc);
+    }
+
+    secureBlob.prototype = _Blob.prototype;
+    return secureBlob;
+  }(Blob);
+
+  window.addEventListener('message', function (event) {
+    if (event.source !== window) {
+      return;
+    }
+    const message = event.data;
+    switch (message.method) {
+      case 'updateLocation':
+        if ((typeof message.info === 'object') && (typeof message.info.coords === 'object')) {
+          hookedObj.genLat = message.info.coords.lat;
+          hookedObj.genLon = message.info.coords.lon;
+          hookedObj.fakeGeo = message.info.fakeIt;
+        }
+        break;
+      default:
+        break;
+    }
+  }, false);
+  //]]>
+}
+          )();</script><rect x="0" y="0" width="900" height="600" fill="#0D0236"/><path d="M0 429L39 419L78 444L117 383L157 423L196 397L235 397L274 436L313 401L352 424L391 408L430 450L470 418L509 429L548 449L587 443L626 435L665 394L704 418L743 409L783 391L822 427L861 406L900 441L900 601L861 601L822 601L783 601L743 601L704 601L665 601L626 601L587 601L548 601L509 601L470 601L430 601L391 601L352 601L313 601L274 601L235 601L196 601L157 601L117 601L78 601L39 601L0 601Z" fill="#a41c94"/><path d="M0 438L39 434L78 418L117 418L157 451L196 467L235 435L274 436L313 437L352 436L391 456L430 436L470 439L509 460L548 449L587 442L626 455L665 431L704 454L743 418L783 410L822 446L861 438L900 462L900 601L861 601L822 601L783 601L743 601L704 601L665 601L626 601L587 601L548 601L509 601L470 601L430 601L391 601L352 601L313 601L274 601L235 601L196 601L157 601L117 601L78 601L39 601L0 601Z" fill="#9444b0"/><path d="M0 477L39 452L78 459L117 469L157 493L196 463L235 459L274 446L313 471L352 471L391 466L430 442L470 490L509 441L548 488L587 445L626 459L665 455L704 475L743 456L783 442L822 442L861 492L900 475L900 601L861 601L822 601L783 601L743 601L704 601L665 601L626 601L587 601L548 601L509 601L470 601L430 601L391 601L352 601L313 601L274 601L235 601L196 601L157 601L117 601L78 601L39 601L0 601Z" fill="#805fc5"/><path d="M0 484L39 478L78 493L117 478L157 489L196 476L235 484L274 500L313 499L352 482L391 509L430 481L470 468L509 474L548 503L587 500L626 494L665 515L704 499L743 475L783 491L822 473L861 510L900 494L900 601L861 601L822 601L783 601L743 601L704 601L665 601L626 601L587 601L548 601L509 601L470 601L430 601L391 601L352 601L313 601L274 601L235 601L196 601L157 601L117 601L78 601L39 601L0 601Z" fill="#6a75d4"/><path d="M0 514L39 527L78 514L117 520L157 524L196 504L235 497L274 497L313 516L352 537L391 528L430 521L470 528L509 533L548 505L587 498L626 528L665 528L704 537L743 505L783 501L822 538L861 506L900 508L900 601L861 601L822 601L783 601L743 601L704 601L665 601L626 601L587 601L548 601L509 601L470 601L430 601L391 601L352 601L313 601L274 601L235 601L196 601L157 601L117 601L78 601L39 601L0 601Z" fill="#5588dc"/><path d="M0 532L39 558L78 532L117 533L157 529L196 528L235 549L274 546L313 550L352 559L391 560L430 537L470 554L509 547L548 538L587 534L626 538L665 523L704 530L743 543L783 562L822 535L861 528L900 557L900 601L861 601L822 601L783 601L743 601L704 601L665 601L626 601L587 601L548 601L509 601L470 601L430 601L391 601L352 601L313 601L274 601L235 601L196 601L157 601L117 601L78 601L39 601L0 601Z" fill="#4999df"/><path d="M0 578L39 563L78 561L117 575L157 555L196 578L235 574L274 570L313 568L352 567L391 580L430 561L470 576L509 560L548 570L587 569L626 576L665 559L704 560L743 555L783 577L822 578L861 558L900 586L900 601L861 601L822 601L783 601L743 601L704 601L665 601L626 601L587 601L548 601L509 601L470 601L430 601L391 601L352 601L313 601L274 601L235 601L196 601L157 601L117 601L78 601L39 601L0 601Z" fill="#4ea8de"/></svg>
